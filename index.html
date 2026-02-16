@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shashoku Simulator - Web Phototypesetting Machine</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="font-manager.js"></script>
+    <script src="audio-manager.js"></script>
+    <script src="renderer.js"></script>
+    <script src="app.js"></script>
+</head>
+
+<body>
+    <div id="machine-container">
+        <!-- The "Window" showing the paper inside the machine -->
+        <div id="viewport-frame">
+            <div id="paper-viewport">
+                <canvas id="film-canvas"></canvas>
+            </div>
+            <div class="lens-indicator"></div>
+        </div>
+
+        <!-- The Main Interface (Lower half of the machine) -->
+        <div id="controls-panel">
+
+            <!-- Left Side: Lens & Spacing -->
+            <div class="control-group left-controls">
+                <div class="dial-container">
+                    <label>Main Lens (Font Size)</label>
+                    <div class="lens-selector">
+                        <select id="font-size-select">
+                            <option value="12">12Q</option>
+                            <option value="13">13Q</option>
+                            <option value="14">14Q</option>
+                            <option value="15">15Q</option>
+                            <option value="16">16Q</option>
+                            <option value="18">18Q</option>
+                            <option value="20" selected>20Q</option>
+                            <option value="24">24Q</option>
+                            <option value="28">28Q</option>
+                            <option value="32">32Q</option>
+                            <option value="38">38Q</option>
+                            <option value="44">44Q</option>
+                            <option value="48">48Q</option>
+                            <option value="50">50Q</option>
+                            <option value="60">60Q</option>
+                            <option value="70">70Q</option>
+                            <option value="80">80Q</option>
+                            <option value="100">100Q</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="dial-container">
+                    <label>Setting (Q/H)</label>
+                    <div class="toggle-switch">
+                        <input type="radio" name="unit" id="unit-q" value="Q" checked>
+                        <label for="unit-q">Q</label>
+                        <input type="radio" name="unit" id="unit-pt" value="pt">
+                        <label for="unit-pt">pt</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center: The Main Plate (Virtual Keyboard / Grid) -->
+            <div id="main-plate-container">
+                <div class="plate-tabs">
+                    <button class="tab-btn active" data-set="hiragana">Hiragana</button>
+                    <button class="tab-btn" data-set="katakana">Katakana</button>
+                    <button class="tab-btn" data-set="symbols">Symbols</button>
+                    <button class="tab-btn" data-set="kanji-basic">Kanji (Basic)</button>
+                </div>
+                <div id="main-plate">
+                    <!-- Grid will be populated by JS -->
+                    <div class="loading-message">Initialize Font System...</div>
+                </div>
+            </div>
+
+            <!-- Right Side: Operation & Export -->
+            <div class="control-group right-controls">
+                <div class="action-button-container">
+                    <button id="shutter-button" class="physical-button">
+                        <span class="button-label">SHUTTER</span>
+                    </button>
+                    <div class="status-light" id="shutter-light"></div>
+                </div>
+
+                <div class="spacing-controls">
+                    <div class="dial-small">
+                        <label>Char Spacing (Okuri)</label>
+                        <input type="range" id="char-spacing" min="0" max="100" value="0">
+                        <span id="char-spacing-val">0H</span>
+                    </div>
+                    <div class="dial-small">
+                        <label>Line Spacing (Feed)</label>
+                        <input type="range" id="line-spacing" min="0" max="100" value="20">
+                        <span id="line-spacing-val">20H</span>
+                    </div>
+                </div>
+
+                <div class="system-controls">
+                    <button id="load-fonts-btn">Load System Fonts</button>
+                    <button id="export-btn">Export PNG (Develop)</button>
+                    <button id="export-pdf-btn">Export PDF (Proof)</button>
+                    <button id="clear-btn">Change Paper (Clear)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden helper for font metrics -->
+    <div id="font-metrics-helper" style="visibility: hidden; white-space: nowrap; position: absolute;"></div>
+</body>
+
+</html>
