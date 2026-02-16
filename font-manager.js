@@ -13,8 +13,7 @@ class FontManager {
 
         try {
             // Request permission and get available fonts
-            // We request 'postscriptName' to uniquely identify transparency
-            const availableFonts = await window.queryLocalFonts({ postscriptNames: [] });
+            const availableFonts = await window.queryLocalFonts();
 
             // Filter: Prefer Japanese fonts if possible, or just sort alphabetically
             // Simple heuristic to detect likely Japanese fonts:
@@ -30,7 +29,47 @@ class FontManager {
 
         } catch (err) {
             console.error('Error accessing local fonts:', err);
-            alert('Could not access local fonts. ' + err.message);
+            // Fallback: Create a file input for manual upload
+            if (confirm('Local Font Access failed or was denied. Would you like to upload a font file (.ttf/.otf) manually?')) {
+                this.triggerManualUpload();
+            }
+        }
+    }
+
+    triggerManualUpload() {
+        let input = document.getElementById('font-file-input');
+        if (!input) {
+            input = document.createElement('input');
+            input.type = 'file';
+            input.id = 'font-file-input';
+            input.accept = '.ttf,.otf,.woff,.woff2';
+            input.style.display = 'none';
+            input.onchange = (e) => this.handleFileUpload(e);
+            document.body.appendChild(input);
+        }
+        input.click();
+    }
+
+    async handleFileUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const buffer = await file.arrayBuffer();
+            const fontName = `ManualFont_${Date.now()}`;
+            const fontFace = new FontFace(fontName, buffer);
+
+            await fontFace.load();
+            document.fonts.add(fontFace);
+
+            this.loadedFontFace = fontName;
+            this.selectedFontData = { fullName: file.name }; // Mock data
+
+            alert(`Loaded font: ${file.name}`);
+            console.log(`Manually loaded ${file.name}`);
+        } catch (err) {
+            alert('Failed to load font file.');
+            console.error(err);
         }
     }
 
