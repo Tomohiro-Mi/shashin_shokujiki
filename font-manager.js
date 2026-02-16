@@ -75,81 +75,129 @@ class FontManager {
 
     async loadFont(fontData) {
         try {
+            // Try explicit blob loading first (best for accurate rendering/metrics if needed)
             const blob = await fontData.blob();
-            // Create a custom font face
             const fontName = `ShashokuFont_${Date.now()}`;
             const fontFace = new FontFace(fontName, blob);
 
             await fontFace.load();
             document.fonts.add(fontFace);
 
+            this.loadedFontFace = fontName;
             this.selectedFontData = fontData;
-            this.loadedFontFace = fontName; // Use this family name in canvas
+            console.log(`Font loaded via Blob: ${fontName}`);
 
-            console.log(`Font loaded: ${fontData.fullName} as ${fontName}`);
+            // Apply to UI
+            document.documentElement.style.setProperty('--app-font', fontName);
 
-            // Update UI or notify renderer
             return fontName;
         } catch (err) {
-            console.error('Failed to load font blob:', err);
-            throw err;
+            console.warn('Blob load failed, falling back to local name:', err);
+
+            // Fallback: Just use the PostScript name or unique name
+            // Note: This relies on the browser caching the permission or the name being accessible.
+            const nameToUse = fontData.postscriptName || fontData.fullName;
+            this.loadedFontFace = nameToUse;
+            this.selectedFontData = fontData;
+
+            // Apply to UI
+            document.documentElement.style.setProperty('--app-font', nameToUse);
+
+            // We can't verify load easily here, so we assume success
+            console.log(`Font set to System Name: ${nameToUse}`);
+            return nameToUse;
         }
     }
 
     showFontPicker() {
         // Create a simple modal or populate a select element
-        // Ideally this should be in UI code, but for speed we do it here or dispatch event.
-        // Let's create a temporary select overlay.
         let picker = document.getElementById('font-picker-overlay');
-        if (!picker) {
-            picker = document.createElement('div');
-            picker.id = 'font-picker-overlay';
-            picker.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0,0,0,0.8); z-index: 1000;
-                display: flex; justify-content: center; align-items: center;
-            `;
-
-            const content = document.createElement('div');
-            content.style.cssText = `
-                background: #333; padding: 20px; border-radius: 8px;
-                width: 80%; max-height: 80%; display: flex; flex-direction: column;
-            `;
-
-            const list = document.createElement('select');
-            list.id = 'font-picker-select';
-            list.size = 20; // Show multiple items
-            list.style.cssText = `
-                flex: 1; background: #222; color: #fff; border: 1px solid #555;
-                font-size: 16px; padding: 10px; margin-bottom: 10px;
-            `;
-
-            const btnContainer = document.createElement('div');
-            btnContainer.style.textAlign = 'right';
-
-            const closeBtn = document.createElement('button');
-            closeBtn.textContent = 'Select & Close';
-            closeBtn.onclick = async () => {
-                const selectedIndex = list.selectedIndex;
-                if (selectedIndex >= 0) {
-                    const font = this.fonts[selectedIndex];
-                    await this.loadFont(font);
-                    document.body.removeChild(picker);
-                }
-            };
-
-            btnContainer.appendChild(closeBtn);
-            content.appendChild(list);
-            content.appendChild(btnContainer);
-            picker.appendChild(content);
-            document.body.appendChild(picker);
+        if (picker) {
+            document.body.removeChild(picker); // Reset if exists
         }
 
-        const list = document.getElementById('font-picker-select');
-        list.innerHTML = '';
+        picker = document.createElement('div');
+        picker.id = 'font-picker-overlay';
+        picker.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 1000;
+            display: flex; justify-content: center; align-items: center;
+        `;
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+            background: #2b2b2b; padding: 20px; border-radius: 8px; border: 1px solid #444;
+            width: 80%; max-width: 500px; max-height: 80%; display: flex; flex-direction: column;
+            color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        `;
+
+        const title = document.createElement('h3');
+        title.textContent = 'Select System Font';
+        title.style.margin = '0 0 15px 0';
+        title.style.fontSize = '16px';
+
+        const list = document.createElement('select');
+        list.id = 'font-picker-select';
+        list.size = 15;
+        list.style.cssText = `
+            flex: 1; background: #1a1a1a; color: #fff; border: 1px solid #555;
+            font-size: 14px; padding: 10px; margin-bottom: 20px; outline: none;
+            overflow-y: auto;
+        `;
+
+        const btnContainer = document.createElement('div');
+        btnContainer.style.display = 'flex';
+        btnContainer.style.justifyContent = 'flex-end';
+        btnContainer.style.gap = '10px';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.onclick = () => document.body.removeChild(picker);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'Select Font';
+        closeBtn.style.backgroundColor = '#cc0000';
+        closeBtn.style.color = '#fff';
+        closeBtn.style.border = 'none';
+
+        const selectFont = async () => {
+            const selectedIndex = list.selectedIndex;
+            if (selectedIndex < 0) {
+                alert('Please click on a font name to select it.');
+                return;
+            }
+
+            const font = this.fonts[selectedIndex];
+            closeBtn.textContent = 'Loading...';
+            closeBtn.disabled = true;
+
+            try {
+                await this.loadFont(font);
+                document.body.removeChild(picker);
+                // alert(`Switched to: ${font.fullName}`);
+            } catch (err) {
+                console.error('Final Font Load Error:', err);
+                alert('Error loading font: ' + err.message);
+                closeBtn.textContent = 'Select Font';
+                closeBtn.disabled = false;
+            }
+        };
+
+        closeBtn.onclick = selectFont;
+        list.ondblclick = selectFont;
+
+        btnContainer.appendChild(cancelBtn);
+        btnContainer.appendChild(closeBtn);
+        content.appendChild(title);
+        content.appendChild(list);
+        content.appendChild(btnContainer);
+        picker.appendChild(content);
+        document.body.appendChild(picker);
+
         this.fonts.forEach((f, i) => {
             const opt = document.createElement('option');
             opt.value = i;
+            // Show localized name if available? fullName is usually best
             opt.textContent = f.fullName;
             list.appendChild(opt);
         });

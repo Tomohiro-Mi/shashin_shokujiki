@@ -70,6 +70,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // Custom Char Adding
+    document.getElementById('add-char-btn').addEventListener('click', () => {
+        const input = document.getElementById('add-char-text');
+        const text = input.value;
+        if (!text) return;
+
+        const plate = document.getElementById('main-plate');
+        // Retrieve current characters from DOM to avoid duplicate logic or state loss? 
+        // Or just append.
+        // Let's just append to the current view for simplicity.
+        // Ideally we should update the dataset, but for now simple append is fine.
+
+        text.split('').forEach(char => {
+            const div = document.createElement('div');
+            div.className = 'char-cell';
+            div.textContent = char;
+            div.onclick = () => {
+                document.querySelectorAll('.char-cell').forEach(c => c.classList.remove('active'));
+                div.classList.add('active');
+                window.dispatchEvent(new CustomEvent('char-selected', { detail: char }));
+            };
+            plate.insertBefore(div, plate.firstChild); // Add to top
+        });
+
+        input.value = '';
+    });
+
     // Initial plate
     populatePlate('hiragana');
 });
